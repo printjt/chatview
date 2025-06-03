@@ -35,37 +35,50 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   AppTheme theme = LightTheme();
   bool isDarkTheme = false;
-  final _chatController = ChatController(
-    initialMessageList: Data.messageList,
-    scrollController: ScrollController(),
-    currentUser: const ChatUser(
-      id: '1',
-      name: 'Flutter',
-      profilePhoto: Data.profileImage,
-    ),
-    otherUsers: const [
-      ChatUser(
-        id: '2',
-        name: 'Simform',
+  late final ChatController _chatController;
+
+  @override
+  void initState() {
+    super.initState();
+    _chatController = ChatController(
+      initialMessageList: Data.messageList,
+      scrollController: ScrollController(),
+      currentUser: ChatUser(
+        id: '1',
+        name: 'Flutter',
         profilePhoto: Data.profileImage,
       ),
-      ChatUser(
-        id: '3',
-        name: 'Jhon',
-        profilePhoto: Data.profileImage,
-      ),
-      ChatUser(
-        id: '4',
-        name: 'Mike',
-        profilePhoto: Data.profileImage,
-      ),
-      ChatUser(
-        id: '5',
-        name: 'Rich',
-        profilePhoto: Data.profileImage,
-      ),
-    ],
-  );
+      otherUsers: [
+        ChatUser(
+          id: '2',
+          name: 'Simform',
+          profilePhoto: Data.profileImage,
+        ),
+        ChatUser(
+          id: '3',
+          name: 'Jhon',
+          profilePhoto: Data.profileImage,
+        ),
+        ChatUser(
+          id: '4',
+          name: 'Mike',
+          profilePhoto: Data.profileImage,
+        ),
+        ChatUser(
+          id: '5',
+          name: 'Rich',
+          profilePhoto: Data.profileImage,
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    // ChatController should be disposed to avoid memory leaks
+    _chatController.dispose();
+    super.dispose();
+  }
 
   void _showHideTypingIndicator() {
     _chatController.setTypingIndicator = !_chatController.showTypingIndicator;

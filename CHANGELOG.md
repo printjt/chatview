@@ -1,3 +1,8 @@
+## [2.4.2] (unreleased)
+
+* **Fix**: [289](https://github.com/SimformSolutionsPvtLtd/flutter_chatview/issues/289)
+  ScrollController is disposed when parent widget state changes
+
 ## [2.4.1]
 
 * **Important**: Updated minimum SDK version to `3.4.0`
