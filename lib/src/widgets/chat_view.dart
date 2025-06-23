@@ -20,11 +20,13 @@
  * SOFTWARE.
  */
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:chatview/chatview.dart';
 import 'package:chatview/src/widgets/chat_list_widget.dart';
 import 'package:chatview/src/widgets/chatview_state_widget.dart';
 import 'package:chatview/src/widgets/reaction_popup.dart';
+import 'package:chatview/src/widgets/text_message_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -64,6 +66,7 @@ class ChatView extends StatefulWidget {
     this.replyMessageBuilder,
     this.replySuggestionsConfig,
     this.scrollToBottomButtonConfig,
+    this.onEditTap,
   })  : chatBackgroundConfig =
             chatBackgroundConfig ?? const ChatBackgroundConfiguration(),
         chatViewStateConfig =
@@ -150,6 +153,12 @@ class ChatView extends StatefulWidget {
 
   /// Provides a configuration for scroll to bottom button config
   final ScrollToBottomButtonConfig? scrollToBottomButtonConfig;
+
+  final void Function(
+    Message? message,
+    ReplyMessage replyMessage,
+    MessageType messageType,
+  )? onEditTap; // New callback
 
   static void closeReplyMessageView(BuildContext context) {
     final state = context.findAncestorStateOfType<_ChatViewState>();
@@ -283,6 +292,44 @@ class _ChatViewState extends State<ChatView>
                                       widget.sendMessageConfig?.textFieldConfig,
                                 ),
                               ),
+                            // Blur overlay when editing
+                            if (_sendMessageKey.currentState != null) ...{
+                              ValueListenableBuilder<String?>(
+                                valueListenable: _sendMessageKey
+                                    .currentState!.editingMessageId,
+                                builder: (context, value, child) {
+                                  return value != null
+                                      ? Positioned.fill(
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(
+                                                sigmaX: 6.0, sigmaY: 6.0),
+                                            child: ColoredBox(
+                                              color:
+                                                  Colors.black.withOpacity(0.2),
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink();
+                                },
+                              ),
+                            },
+                            // Overlay for editing message
+                            if (_sendMessageKey.currentState != null &&
+                                _sendMessageKey
+                                        .currentState!.editingMessageId.value !=
+                                    null &&
+                                _sendMessageKey.currentState!.message != null)
+                              Positioned(
+                                left: 16,
+                                right: 16,
+                                bottom: 60,
+                                child: TextMessageView(
+                                  isMessageBySender: true,
+                                  message:
+                                      _sendMessageKey.currentState!.message!,
+                                  showReactionWidget: false,
+                                ),
+                              ),
                             if (featureActiveConfig.enableTextField)
                               SendMessageWidget(
                                 key: _sendMessageKey,
@@ -300,6 +347,7 @@ class _ChatViewState extends State<ChatView>
                                 },
                                 messageConfig: widget.messageConfig,
                                 replyMessageBuilder: widget.replyMessageBuilder,
+                                onEditTap: _onEditTap,
                               ),
                           ],
                         ),
@@ -312,6 +360,7 @@ class _ChatViewState extends State<ChatView>
                     valueListenable: context.chatViewIW!.showPopUp,
                     builder: (_, showPopupValue, child) {
                       return ReactionPopup(
+                        sendMessageKey: _sendMessageKey,
                         key: context.chatViewIW!.reactionPopupKey,
                         onTap: () => _onChatListTap(context),
                         showPopUp: showPopupValue,
@@ -335,6 +384,24 @@ class _ChatViewState extends State<ChatView>
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
   }
 
+  void _onEditTap(
+    Message? message,
+    ReplyMessage replyMessage,
+    MessageType messageType,
+  ) {
+    if (widget.sendMessageBuilder == null) {
+      if (widget.onEditTap != null) {
+        widget.onEditTap!(message, replyMessage, messageType);
+      }
+    }
+    // Clear editing state after editing
+    if (_sendMessageKey.currentState != null) {
+      _sendMessageKey.currentState!.editingMessageId.value = null;
+      setState(() {});
+    }
+    chatController.scrollToLastMessage();
+  }
+
   void _onSendTap(
     String message,
     ReplyMessage replyMessage,
@@ -344,6 +411,11 @@ class _ChatViewState extends State<ChatView>
       if (widget.onSendTap != null) {
         widget.onSendTap!(message, replyMessage, messageType);
       }
+    }
+    // Clear editing state after sending
+    if (_sendMessageKey.currentState != null) {
+      _sendMessageKey.currentState!.editingMessageId.value = null;
+      // setState(() {});
     }
     chatController.scrollToLastMessage();
   }

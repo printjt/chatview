@@ -105,6 +105,15 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ChatView(
+        onEditTap: (message, replyMessage, messageType) {
+          final index = _chatController.initialMessageList
+              .indexWhere((element) => element.id == message?.id);
+          if (message != null) {
+            _chatController.initialMessageList[index] = message;
+            _chatController.messageStreamController.sink
+                .add(_chatController.initialMessageList);
+          }
+        },
         chatController: _chatController,
         onSendTap: _onSendTap,
         featureActiveConfig: const FeatureActiveConfig(

@@ -19,20 +19,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import 'package:chatview/chatview.dart';
 import 'package:flutter/material.dart';
 
 import '../extensions/extensions.dart';
 import '../utils/constants/constants.dart';
 import 'emoji_picker_widget.dart';
+import 'send_message_widget.dart';
 
 class EmojiRow extends StatelessWidget {
   EmojiRow({
     Key? key,
     required this.onEmojiTap,
+    required this.sendMessageKey,
+    this.message,
   }) : super(key: key);
 
   /// Provides callback when user taps on emoji in reaction pop-up.
   final ValueSetter<String> onEmojiTap;
+  final GlobalKey<SendMessageWidgetState> sendMessageKey;
+  final Message? message;
 
   /// These are default emojis.
   final List<String> _emojiUnicodes = [
@@ -76,6 +82,15 @@ class EmojiRow extends StatelessWidget {
           ),
           onPressed: () => _showBottomSheet(context),
         ),
+        if (message?.messageType.isText ?? false)
+          IconButton(
+            onPressed: () {
+              context.chatViewIW?.showPopUp.value = false;
+              sendMessageKey.currentState?.addText(message);
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+            icon: const Icon(Icons.edit),
+          ),
       ],
     );
   }

@@ -39,6 +39,7 @@ class SendMessageWidget extends StatefulWidget {
   const SendMessageWidget({
     Key? key,
     required this.onSendTap,
+    this.onEditTap,
     this.sendMessageConfig,
     this.sendMessageBuilder,
     this.messageConfig,
@@ -47,6 +48,13 @@ class SendMessageWidget extends StatefulWidget {
 
   /// Provides call back when user tap on send button on text field.
   final StringMessageCallBack onSendTap;
+
+  /// Provides call back when user tap on send button while editing a message.
+  final void Function(
+    Message? message,
+    ReplyMessage replyMessage,
+    MessageType messageType,
+  )? onEditTap; // New callback
 
   /// Provides configuration for text field appearance.
   final SendMessageConfiguration? sendMessageConfig;
@@ -77,6 +85,10 @@ class SendMessageWidgetState extends State<SendMessageWidget> {
   ReplyMessage _replyMessage = const ReplyMessage();
 
   ChatUser? currentUser;
+
+  ValueNotifier<String?> editingMessageId = ValueNotifier(null);
+
+  Message? editedMessage;
 
   @override
   void didChangeDependencies() {
@@ -232,11 +244,20 @@ class SendMessageWidgetState extends State<SendMessageWidget> {
       _selectedImageViewWidgetKey.currentState?.selectedImages.value = [];
     }
 
-    widget.onSendTap.call(
-      messageText.trim(),
-      _replyMessage,
-      MessageType.text,
-    );
+    if (editingMessageId.value != null) {
+      editedMessage = message?.copyWith(message: messageText);
+      widget.onEditTap?.call(
+        editedMessage,
+        _replyMessage,
+        MessageType.text,
+      );
+    } else {
+      widget.onSendTap.call(
+        messageText.trim(),
+        _replyMessage,
+        MessageType.text,
+      );
+    }
     onCloseTap();
   }
 
@@ -285,5 +306,16 @@ class SendMessageWidgetState extends State<SendMessageWidget> {
     _textEditingController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Message? message;
+
+  void addText(Message? message) {
+    if (message == null) return;
+    this.message = message;
+    _textEditingController.text = message.message;
+    _focusNode.requestFocus();
+    editingMessageId.value = message.id;
+    onCloseTap();
   }
 }

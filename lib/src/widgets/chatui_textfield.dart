@@ -121,6 +121,11 @@ class _ChatUITextFieldState extends State<ChatUITextField> {
         HardwareKeyboard.instance.addHandler(handler);
       }
     }
+    widget.textEditingController.addListener(
+      () {
+        _onChanged(widget.textEditingController.text);
+      },
+    );
   }
 
   @override
@@ -236,7 +241,6 @@ class _ChatUITextFieldState extends State<ChatUITextField> {
                     minLines: textFieldConfig?.minLines ?? 1,
                     keyboardType: textFieldConfig?.textInputType,
                     inputFormatters: textFieldConfig?.inputFormatters,
-                    onChanged: _onChanged,
                     enabled: textFieldConfig?.enabled,
                     textCapitalization: textFieldConfig?.textCapitalization ??
                         TextCapitalization.sentences,

@@ -27,12 +27,14 @@ import '../extensions/extensions.dart';
 import '../models/config_models/reaction_popup_configuration.dart';
 import 'emoji_row.dart';
 import 'glassmorphism_reaction_popup.dart';
+import 'send_message_widget.dart';
 
 class ReactionPopup extends StatefulWidget {
   const ReactionPopup({
     Key? key,
     required this.onTap,
     required this.showPopUp,
+    required this.sendMessageKey,
   }) : super(key: key);
 
   /// Provides call back when user taps on reaction pop-up.
@@ -40,6 +42,8 @@ class ReactionPopup extends StatefulWidget {
 
   /// Represents should pop-up show or not.
   final bool showPopUp;
+
+  final GlobalKey<SendMessageWidgetState> sendMessageKey;
 
   @override
   ReactionPopupState createState() => ReactionPopupState();
@@ -146,6 +150,8 @@ class ReactionPopupState extends State<ReactionPopup>
   }
 
   Widget get _reactionPopupRow => EmojiRow(
+        sendMessageKey: widget.sendMessageKey,
+        message: _message,
         onEmojiTap: (emoji) {
           widget.onTap();
           if (currentUser != null && _message != null) {

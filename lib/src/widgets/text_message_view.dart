@@ -41,6 +41,7 @@ class TextMessageView extends StatelessWidget {
     this.messageReactionConfig,
     this.highlightMessage = false,
     this.highlightColor,
+    this.showReactionWidget = true,
   }) : super(key: key);
 
   /// Represents current message is sent by current user.
@@ -66,6 +67,9 @@ class TextMessageView extends StatelessWidget {
 
   /// Allow user to set color of highlighted message.
   final Color? highlightColor;
+
+  /// Represents whether to show reaction widget or not.
+  final bool showReactionWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +108,7 @@ class TextMessageView extends StatelessWidget {
                       ),
                 ),
         ),
-        if (message.reaction.reactions.isNotEmpty)
+        if (message.reaction.reactions.isNotEmpty && showReactionWidget)
           ReactionWidget(
             key: key,
             isMessageBySender: isMessageBySender,
