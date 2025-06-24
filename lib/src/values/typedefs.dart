@@ -67,9 +67,10 @@ typedef CustomViewForReplyMessage = Widget Function(
   BuildContext context,
   ReplyMessage state,
 );
-typedef GetMessageSeparator = (
-  Map<int, DateTime> messageSeparator,
-  DateTime dateTime,
+typedef GetMessageSeparatorWithCounts = (
+  Map<int, DateTime> separators,
+  DateTime lastMatchedDate,
+  Map<int, int> separatorCounts
 );
 typedef SelectedImageViewBuilder = Widget Function(
   List<String> images,
@@ -138,4 +139,11 @@ typedef AutoAnimateItemBuilder<T> = Widget Function(
   int index,
   bool isLastItem,
   T item,
+);
+typedef PaginationCallback = Future<void> Function(
+  ChatPaginationDirection direction,
+  Message message,
+);
+typedef OldReplyMessageFetchCallback = Future<void> Function(
+  String messageId,
 );
