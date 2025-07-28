@@ -130,6 +130,7 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
                 ),
                 searchConfig: ChatViewListSearchConfig(
                   textEditingController: _searchController,
+                  debounceDuration: const Duration(milliseconds: 300),
                   border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(10)),
                   ),
