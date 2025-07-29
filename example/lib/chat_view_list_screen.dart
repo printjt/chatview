@@ -57,6 +57,8 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
                 enablePagination: true,
                 loadMoreConfig: const LoadMoreConfig(),
                 tileConfig: ListTileConfig(
+                  pinIconConfig: const PinIconConfig(),
+                  muteIconConfig: const MuteIconConfig(),
                   typingStatusConfig: const TypingStatusConfig(
                     showUserNames: true,
                   ),
