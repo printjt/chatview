@@ -51,6 +51,49 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
                   ),
                 ],
               ),
+              header: SizedBox(
+                height: 60,
+                child: ListView(
+                  padding: const EdgeInsetsGeometry.all(12),
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    FilterChip.elevated(
+                      backgroundColor: Colors.grey.shade200,
+                      label: Text(
+                          'All Chats (${_chatListController?.chatListMap.length ?? 0})'),
+                      onSelected: (bool value) =>
+                          _chatListController?.clearSearch(),
+                    ),
+                    const SizedBox(width: 12),
+                    FilterChip.elevated(
+                      backgroundColor: Colors.grey.shade200,
+                      label: const Text('Pinned Chats'),
+                      onSelected: (bool value) {
+                        _chatListController?.setSearchChats(
+                          _chatListController?.chatListMap.values
+                                  .where((e) => e.settings.pinStatus.isPinned)
+                                  .toList() ??
+                              [],
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    FilterChip.elevated(
+                      backgroundColor: Colors.grey.shade200,
+                      label: const Text('Unread Chats'),
+                      onSelected: (bool value) {
+                        _chatListController?.setSearchChats(
+                          _chatListController?.chatListMap.values
+                                  .where((e) => (e.unreadCount ?? 0) > 0)
+                                  .toList() ??
+                              [],
+                        );
+                      },
+                    ),
+                  ],
+                  // separatorBuilder: (_, __) => const SizedBox(width: 12),
+                ),
+              ),
               loadMoreChats: () async =>
                   await Future.delayed(const Duration(seconds: 2)),
               menuConfig: ChatMenuConfig(
@@ -103,49 +146,46 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
                   Navigator.of(context).pop();
                 },
               ),
-              config: ChatViewListConfig(
-                enablePagination: true,
-                loadMoreConfig: const LoadMoreConfig(),
-                tileConfig: ListTileConfig(
-                  pinIconConfig: const PinIconConfig(),
-                  muteIconConfig: const MuteIconConfig(),
-                  typingStatusConfig: const TypingStatusConfig(
-                    showUserNames: true,
-                  ),
-                  unreadCountConfig: const UnreadCountConfig(
-                    style: UnreadCountStyle.ninetyNinePlus,
-                  ),
-                  userAvatarConfig: UserAvatarConfig(
-                    backgroundColor: Colors.red.shade100,
-                  ),
-                  onTap: (chat) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => ChatViewScreen(
-                          chat: chat,
-                        ),
+              enablePagination: true,
+              loadMoreConfig: const LoadMoreConfig(),
+              tileConfig: ListTileConfig(
+                pinIconConfig: const PinIconConfig(),
+                muteIconConfig: const MuteIconConfig(),
+                typingStatusConfig: const TypingStatusConfig(
+                  showUserNames: true,
+                ),
+                unreadCountConfig: const UnreadCountConfig(
+                  style: UnreadCountStyle.ninetyNinePlus,
+                ),
+                userAvatarConfig: UserAvatarConfig(
+                  backgroundColor: Colors.red.shade100,
+                ),
+                onTap: (chat) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ChatViewScreen(
+                        chat: chat,
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
+              ),
+              searchConfig: ChatViewListSearchConfig(
+                textEditingController: _searchController,
+                debounceDuration: const Duration(milliseconds: 300),
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
                 ),
-                searchConfig: ChatViewListSearchConfig(
-                  textEditingController: _searchController,
-                  debounceDuration: const Duration(milliseconds: 300),
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                  ),
-                  onSearch: (value) async {
-                    if (value.isEmpty) {
-                      return null;
-                    }
-                    final list = _chatListController?.chatListMap.values
-                        .where((chat) => chat.name
-                            .toLowerCase()
-                            .contains(value.toLowerCase()))
-                        .toList();
-                    return list;
-                  },
-                ),
+                onSearch: (value) async {
+                  if (value.isEmpty) {
+                    return null;
+                  }
+                  final list = _chatListController?.chatListMap.values
+                      .where((chat) =>
+                          chat.name.toLowerCase().contains(value.toLowerCase()))
+                      .toList();
+                  return list;
+                },
               ),
             ),
     );
