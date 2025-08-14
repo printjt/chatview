@@ -166,34 +166,6 @@ class _ChatGroupedListWidgetState extends State<ChatGroupedListWidget>
     );
   }
 
-
-  // Future<void> _onReplyTap(String id) async {
-  //   // Finds the replied message if exists
-  //   final replyMsgCurrentState = _messageKeys[id]?.currentState;
-  //   final repliedMsgAutoScrollConfig =
-  //       chatListConfig.repliedMessageConfig?.repliedMsgAutoScrollConfig;
-  //   final highlightDuration = repliedMsgAutoScrollConfig?.highlightDuration ??
-  //       const Duration(milliseconds: 300);
-  //   // Scrolls to replied message and highlights
-  //   if (replyMsgCurrentState != null) {
-  //     await Scrollable.ensureVisible(
-  //       replyMsgCurrentState.context,
-  //       // This value will make widget to be in center when auto scrolled.
-  //       alignment: 0.5,
-  //       curve:
-  //       repliedMsgAutoScrollConfig?.highlightScrollCurve ?? Curves.easeIn,
-  //       duration: highlightDuration,
-  //     );
-  //     if (repliedMsgAutoScrollConfig?.enableHighlightRepliedMsg ?? false) {
-  //       _replyId.value = id;
-  //
-  //       Future.delayed(highlightDuration, () {
-  //         _replyId.value = null;
-  //       });
-  //     }
-  //   }
-  // }
-
   Future<void> _onReplyTap(
     String id,
     List<Message> messages, {
@@ -236,8 +208,8 @@ class _ChatGroupedListWidgetState extends State<ChatGroupedListWidget>
       return;
     }
 
-    final repliedMessage = messages[index];
-    final repliedMsgState = repliedMessage.key.currentState;
+    // Finds the replied message if exists
+    final repliedMsgState = _messageKeys[id]?.currentState;
 
     // The message is in the list but not rendered yet.
     // Scroll slightly repeatedly to ensure it is rendered.
@@ -396,13 +368,12 @@ class _ChatGroupedListWidgetState extends State<ChatGroupedListWidget>
                   /// By removing separators encountered till now from the [index]
                   /// so that we'll get actual index to display message in chat
                   var newIndex = index - (separatorCounts[index] ?? 0);
-                  final message = messages[newIndex];
-
                   final messageChild = ValueListenableBuilder<String?>(
                     valueListenable: _replyId,
                     builder: (context, state, child) {
                       final message = messages[newIndex];
-                      final messageKey = _messageKeys[message.id] ??= GlobalKey();
+                      final messageKey =
+                          _messageKeys[message.id] ??= GlobalKey();
                       final enableScrollToRepliedMsg = chatListConfig
                               .repliedMessageConfig
                               ?.repliedMsgAutoScrollConfig

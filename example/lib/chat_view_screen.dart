@@ -93,10 +93,40 @@ class _ChatViewScreenState extends State<ChatViewScreen> {
           : ChatView(
               chatController: _chatController!,
               onSendTap: _onSendTap,
+              loadMoreData: (direction, message) async {
+                final controller = _chatController;
+                if (controller == null) return;
+                await Future.delayed(const Duration(seconds: 1));
+                controller.loadMoreData(
+                  [
+                    Message(
+                      id: (controller.initialMessageList.length + 1).toString(),
+                      message: '${direction.name} meeting 1.',
+                      createdAt: direction.isPrevious
+                          ? DateTime(2015, 21, 00)
+                          : DateTime.now(),
+                      sentBy: '2',
+                    ),
+                    Message(
+                      id: (controller.initialMessageList.length + 2).toString(),
+                      message: '${direction.name} meeting 2.',
+                      createdAt: direction.isPrevious
+                          ? DateTime(2015, 21, 00)
+                          : DateTime.now(),
+                      sentBy: '2',
+                    ),
+                    if (direction.isNext &&
+                        controller.canRevertToInitialMessageList)
+                      Data.messageList.first,
+                  ],
+                  direction: direction,
+                );
+              },
               featureActiveConfig: const FeatureActiveConfig(
                 lastSeenAgoBuilderVisibility: true,
                 receiptsBuilderVisibility: true,
                 enableScrollToBottomButton: true,
+                enablePagination: true,
               ),
               scrollToBottomButtonConfig: ScrollToBottomButtonConfig(
                 backgroundColor: theme.textFieldBackgroundColor,
@@ -292,6 +322,76 @@ class _ChatViewScreenState extends State<ChatViewScreen> {
                 profileImageUrl: Data.profileImage,
               ),
               repliedMessageConfig: RepliedMessageConfiguration(
+                loadOldReplyMessage: (id) async {
+                  final controller = _chatController;
+                  if (controller == null) return;
+                  controller.replaceMessageList(
+                    [
+                      Message(
+                        id: '112',
+                        message: 'What about the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '1',
+                      ),
+                      Message(
+                        id: (controller.initialMessageList.length + 1)
+                            .toString(),
+                        message: 'I will ignore the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '2',
+                      ),
+                      Message(
+                        id: (controller.initialMessageList.length + 2)
+                            .toString(),
+                        message: 'I will join the meeting.',
+                        createdAt: DateTime(2015, 6, 20),
+                        sentBy: '3',
+                      ),
+                      Message(
+                        id: '113',
+                        message: 'Such a boring meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '1',
+                      ),
+                      Message(
+                        id: '114',
+                        message: 'Stop talking about the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '4',
+                      ),
+                      Message(
+                        id: '115',
+                        message: 'Stop talking about the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '4',
+                      ),
+                      Message(
+                        id: '116',
+                        message: 'Stop talking about the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '4',
+                      ),
+                      Message(
+                        id: '117',
+                        message: 'Stop talking about the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '4',
+                      ),
+                      Message(
+                        id: '118',
+                        message: 'Stop talking about the meeting.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '4',
+                      ),
+                      Message(
+                        id: '140',
+                        message: 'This.',
+                        createdAt: DateTime(2015, 6, 21),
+                        sentBy: '2',
+                      ),
+                    ],
+                  );
+                },
                 backgroundColor: theme.repliedMessageColor,
                 verticalBarColor: theme.verticalBarColor,
                 repliedMsgAutoScrollConfig: RepliedMsgAutoScrollConfig(
