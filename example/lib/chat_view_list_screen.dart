@@ -1,8 +1,35 @@
 import 'package:chatview/chatview.dart';
 import 'package:flutter/material.dart';
 
+import 'colors.dart';
 import 'data.dart';
 import 'main.dart';
+import 'widgets/category_chip.dart';
+
+enum FilterType {
+  all('All'),
+  unread('Unread 99+'),
+  group('Groups');
+
+  const FilterType(this.label);
+
+  final String label;
+
+  bool get isAll => this == all;
+
+  bool get isUnread => this == unread;
+
+  bool get isGroup => this == group;
+
+  List<ChatViewListItem> filterChats(List<ChatViewListItem> chats) {
+    return switch (this) {
+      FilterType.unread =>
+        chats.where((e) => (e.unreadCount ?? 0) > 0).toList(),
+      FilterType.group => chats.where((e) => e.chatRoomType.isGroup).toList(),
+      FilterType.all => chats,
+    };
+  }
+}
 
 class ChatViewListScreen extends StatefulWidget {
   const ChatViewListScreen({super.key});
@@ -17,6 +44,8 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
   ChatViewListController? _chatListController;
 
   ScrollController? _scrollController;
+
+  FilterType filter = FilterType.all;
 
   // Assign the controller in didChangeDependencies
   // to ensure PrimaryScrollController is available.
@@ -38,57 +67,37 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ChatViewList(
               controller: _chatListController!,
-              appbar: ChatViewListAppBar(
-                titleText: 'ChatView',
-                centerTitle: false,
+              appbar: const ChatViewListAppBar(
+                centerTitle: true,
                 scrolledUnderElevation: 0,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () {
-                      // Handle search action
-                    },
-                  ),
-                ],
+                titleText: 'ChatView List',
               ),
               header: SizedBox(
                 height: 60,
                 child: ListView(
-                  padding: const EdgeInsetsGeometry.all(12),
+                  padding: const EdgeInsetsGeometry.symmetric(horizontal: 12),
                   scrollDirection: Axis.horizontal,
                   children: [
-                    FilterChip.elevated(
-                      backgroundColor: Colors.grey.shade200,
-                      label: Text(
-                          'All Chats (${_chatListController?.chatListMap.length ?? 0})'),
-                      onSelected: (bool value) =>
-                          _chatListController?.clearSearch(),
+                    CategoryChip(
+                      value: filter,
+                      groupValue: FilterType.all,
+                      onSelected: () => _filterChats(FilterType.all),
                     ),
                     const SizedBox(width: 12),
-                    FilterChip.elevated(
-                      backgroundColor: Colors.grey.shade200,
-                      label: const Text('Pinned Chats'),
-                      onSelected: (bool value) {
-                        _chatListController?.setSearchChats(
-                          _chatListController?.chatListMap.values
-                                  .where((e) => e.settings.pinStatus.isPinned)
-                                  .toList() ??
-                              [],
-                        );
-                      },
+                    CategoryChip(
+                      value: filter,
+                      counts: _chatListController?.chatListMap.values
+                              .where((e) => e.chatRoomType.isGroup)
+                              .length ??
+                          0,
+                      groupValue: FilterType.group,
+                      onSelected: () => _filterChats(FilterType.group),
                     ),
                     const SizedBox(width: 12),
-                    FilterChip.elevated(
-                      backgroundColor: Colors.grey.shade200,
-                      label: const Text('Unread Chats'),
-                      onSelected: (bool value) {
-                        _chatListController?.setSearchChats(
-                          _chatListController?.chatListMap.values
-                                  .where((e) => (e.unreadCount ?? 0) > 0)
-                                  .toList() ??
-                              [],
-                        );
-                      },
+                    CategoryChip(
+                      value: filter,
+                      groupValue: FilterType.unread,
+                      onSelected: () => _filterChats(FilterType.unread),
                     ),
                   ],
                 ),
@@ -114,11 +123,19 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
                 ),
               ),
               tileConfig: ListTileConfig(
-                userActiveStatusConfig: const UserActiveStatusConfig(
-                  alignment: UserActiveStatusAlignment.topRight,
+                userActiveStatusConfig: UserActiveStatusConfig(
+                  color: (status) => switch (status) {
+                    UserActiveStatus.online => Colors.greenAccent,
+                    UserActiveStatus.offline => AppColors.grey200,
+                  },
+                  alignment: UserActiveStatusAlignment.bottomRight,
                 ),
                 lastMessageStatusConfig: LastMessageStatusConfig(
                   showStatusFor: (message) => message.sentBy == '2',
+                  color: (status) => switch (status) {
+                    MessageStatus.read => Colors.red,
+                    _ => Colors.black,
+                  },
                 ),
                 typingStatusConfig: const TypingStatusConfig(
                   showUserNames: true,
@@ -140,16 +157,36 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
                 },
               ),
               searchConfig: SearchConfig(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 5),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+                prefixIcon: null,
+                suffixIcon: const Padding(
+                  padding: EdgeInsets.only(right: 8.0),
+                  child: Icon(Icons.search_rounded, color: Color(0xff6A6C6C)),
+                ),
                 textEditingController: _searchController,
+                textFieldBackgroundColor: AppColors.grey200,
                 debounceDuration: const Duration(milliseconds: 300),
                 border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
                 ),
                 onSearch: (value) async {
                   if (value.isEmpty) {
                     return null;
                   }
-                  final list = _chatListController?.chatListMap.values
+
+                  List<ChatViewListItem> chats =
+                      _chatListController?.chatListMap.values.toList() ?? [];
+
+                  if (!filter.isAll) {
+                    chats = filter.filterChats(chats);
+                  }
+
+                  final list = chats
                       .where((chat) =>
                           chat.name.toLowerCase().contains(value.toLowerCase()))
                       .toList();
@@ -158,6 +195,20 @@ class _ChatViewListScreenState extends State<ChatViewListScreen> {
               ),
             ),
     );
+  }
+
+  void _filterChats(FilterType type) {
+    _searchController.clear();
+    filter = type;
+    if (type.isAll) {
+      _chatListController?.clearSearch();
+    } else {
+      final chats = type.filterChats(
+        _chatListController?.chatListMap.values.toList() ?? [],
+      );
+      _chatListController?.setSearchChats(chats);
+    }
+    setState(() {});
   }
 
   @override
