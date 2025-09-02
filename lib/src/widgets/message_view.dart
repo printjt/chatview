@@ -19,8 +19,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import 'package:chatview/src/models/config_models/message_reaction_configuration.dart';
 import 'package:chatview_utils/chatview_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../extensions/extensions.dart';
 import '../models/chat_bubble.dart';
@@ -213,7 +215,7 @@ class _MessageViewState extends State<MessageView>
                     highlightScale: widget.highlightScale,
                   );
                 } else if (widget.message.messageType.isText) {
-                  return TextMessageView(
+                  return EnhancedTextMessageView(
                     inComingChatBubbleConfig: widget.inComingChatBubbleConfig,
                     outgoingChatBubbleConfig: widget.outgoingChatBubbleConfig,
                     isMessageBySender: widget.isMessageBySender,
@@ -282,5 +284,197 @@ class _MessageViewState extends State<MessageView>
   void dispose() {
     _animationController?.dispose();
     super.dispose();
+  }
+}
+
+// Enhanced TextMessageView to handle URLs
+class EnhancedTextMessageView extends StatelessWidget {
+  const EnhancedTextMessageView({
+    Key? key,
+    required this.message,
+    required this.isMessageBySender,
+    this.chatBubbleMaxWidth,
+    this.inComingChatBubbleConfig,
+    this.outgoingChatBubbleConfig,
+    this.messageReactionConfig,
+    this.highlightColor = Colors.grey,
+    this.highlightMessage = false,
+  }) : super(key: key);
+
+  final Message message;
+  final bool isMessageBySender;
+  final double? chatBubbleMaxWidth;
+  final ChatBubble? inComingChatBubbleConfig;
+  final ChatBubble? outgoingChatBubbleConfig;
+  final MessageReactionConfiguration? messageReactionConfig;
+  final Color highlightColor;
+  final bool highlightMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = isMessageBySender
+        ? outgoingChatBubbleConfig?.textStyle
+        : inComingChatBubbleConfig?.textStyle;
+    final color = isMessageBySender
+        ? outgoingChatBubbleConfig?.color
+        : inComingChatBubbleConfig?.color;
+
+    // Parse the message for URLs and image markers
+    final messageContent = _parseMessageContent(message.message);
+
+    return Container(
+      constraints: BoxConstraints(
+        maxWidth: chatBubbleMaxWidth ?? double.infinity,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: highlightMessage ? highlightColor : color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...messageContent,
+          if (message.reaction.reactions.isNotEmpty)
+            ReactionWidget(
+              reaction: message.reaction,
+              messageReactionConfig: messageReactionConfig,
+              isMessageBySender: isMessageBySender,
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _parseMessageContent(String text) {
+    final List<Widget> content = [];
+    final lines = text.split('\n');
+    final urlRegex = RegExp(r'(https?://[^\s]+)');
+    final imageUrlRegex = RegExp(r'!\[Image\]\((https?://[^\s]+)\)');
+
+    for (final line in lines) {
+      // Check if line contains an image marker
+      final imageMatch = imageUrlRegex.firstMatch(line);
+      if (imageMatch != null) {
+        final imageUrl = imageMatch.group(1)!;
+        content.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl,
+                width: 200,
+                height: 150,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    width: 200,
+                    height: 150,
+                    color: Colors.grey[300],
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 200,
+                    height: 150,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // Check for regular URLs
+      final urlMatches = urlRegex.allMatches(line);
+      if (urlMatches.isEmpty) {
+        // No URLs, just regular text
+        content.add(
+          Text(
+            line,
+            style: isMessageBySender
+                ? outgoingChatBubbleConfig?.textStyle
+                : inComingChatBubbleConfig?.textStyle,
+          ),
+        );
+      } else {
+        // Split the line by URLs and create clickable links
+        int lastIndex = 0;
+        final List<InlineSpan> spans = [];
+
+        for (final match in urlMatches) {
+          // Add text before the URL
+          if (match.start > lastIndex) {
+            spans.add(
+              TextSpan(
+                text: line.substring(lastIndex, match.start),
+                style: isMessageBySender
+                    ? outgoingChatBubbleConfig?.textStyle
+                    : inComingChatBubbleConfig?.textStyle,
+              ),
+            );
+          }
+
+          // Add the clickable URL
+          final url = match.group(0)!;
+          spans.add(
+            WidgetSpan(
+              child: GestureDetector(
+                onTap: () => _launchUrl(url),
+                child: Text(
+                  url,
+                  style: (isMessageBySender
+                          ? outgoingChatBubbleConfig?.textStyle
+                          : inComingChatBubbleConfig?.textStyle)
+                      ?.copyWith(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          lastIndex = match.end;
+        }
+
+        // Add remaining text after the last URL
+        if (lastIndex < line.length) {
+          spans.add(
+            TextSpan(
+              text: line.substring(lastIndex),
+              style: isMessageBySender
+                  ? outgoingChatBubbleConfig?.textStyle
+                  : inComingChatBubbleConfig?.textStyle,
+            ),
+          );
+        }
+
+        content.add(
+          RichText(
+            text: TextSpan(children: spans),
+          ),
+        );
+      }
+    }
+
+    return content;
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      print('Failed to launch URL: $e');
+    }
   }
 }
