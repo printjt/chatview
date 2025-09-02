@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import 'package:chatview/src/models/config_models/message_reaction_configuration.dart';
+import 'package:chatview/chatview.dart';
 import 'package:chatview_utils/chatview_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -349,14 +349,21 @@ class EnhancedTextMessageView extends StatelessWidget {
   List<Widget> _parseMessageContent(String text) {
     final List<Widget> content = [];
     final lines = text.split('\n');
-    final urlRegex = RegExp(r'(https?://[^\s]+)');
-    final imageUrlRegex = RegExp(r'!\[Image\]\((https?://[^\s]+)\)');
+
+    // Improved regex patterns
+    final imageUrlRegex = RegExp(r'!\[Image\]\(([^)]+)\)');
+    final urlRegex = RegExp(r'(https?://[^\s<>"\)]+)');
 
     for (final line in lines) {
+      if (line.trim().isEmpty) {
+        content.add(const SizedBox(height: 4));
+        continue;
+      }
+
       // Check if line contains an image marker
       final imageMatch = imageUrlRegex.firstMatch(line);
       if (imageMatch != null) {
-        final imageUrl = imageMatch.group(1)!;
+        final imageUrl = _extractUrlFromMatch(imageMatch.group(1)!);
         content.add(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -421,14 +428,16 @@ class EnhancedTextMessageView extends StatelessWidget {
             );
           }
 
-          // Add the clickable URL
-          final url = match.group(0)!;
+          // Add the clickable URL (clean it first)
+          final rawUrl = match.group(0)!;
+          final cleanUrl = _cleanUrl(rawUrl);
           spans.add(
             WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
               child: GestureDetector(
-                onTap: () => _launchUrl(url),
+                onTap: () => _launchUrl(cleanUrl),
                 child: Text(
-                  url,
+                  cleanUrl,
                   style: (isMessageBySender
                           ? outgoingChatBubbleConfig?.textStyle
                           : inComingChatBubbleConfig?.textStyle)
@@ -467,11 +476,34 @@ class EnhancedTextMessageView extends StatelessWidget {
     return content;
   }
 
+  String _extractUrlFromMatch(String urlMatch) {
+    // Remove any trailing characters that might be part of markdown syntax
+    String url = urlMatch.trim();
+
+    // Remove trailing parentheses, commas, periods, or other punctuation
+    url = url.replaceAll(RegExp(r'[),.!;:]+$'), '');
+
+    return url;
+  }
+
+  String _cleanUrl(String rawUrl) {
+    // Clean up URL by removing trailing unwanted characters
+    String cleanedUrl = rawUrl;
+
+    // Remove trailing parentheses, commas, periods, or other punctuation
+    cleanedUrl = cleanedUrl.replaceAll(RegExp(r'[),.!;:]+$'), '');
+
+    // Remove any whitespace
+    cleanedUrl = cleanedUrl.trim();
+
+    return cleanedUrl;
+  }
+
   Future<void> _launchUrl(String url) async {
     try {
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       print('Failed to launch URL: $e');
