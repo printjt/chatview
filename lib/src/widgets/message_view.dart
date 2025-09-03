@@ -467,7 +467,12 @@ class EnhancedTextMessageView extends StatelessWidget {
 
         content.add(
           RichText(
-            text: TextSpan(children: spans),
+            text: TextSpan(
+              children: spans,
+              style: isMessageBySender
+                  ? outgoingChatBubbleConfig?.textStyle
+                  : inComingChatBubbleConfig?.textStyle,
+            ),
           ),
         );
       }
