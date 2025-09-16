@@ -359,10 +359,18 @@ class EnhancedTextMessageView extends StatelessWidget {
       );
     }
 
-    for (final line in lines) {
+    for (var line in lines) {
       if (line.trim().isEmpty) {
         content.add(const SizedBox(height: 4));
         continue;
+      }
+
+      // 🔹 Remove known prefixes before processing
+      line = line.trim();
+      if (line.toLowerCase().startsWith("image:")) {
+        line = line.substring(6).trim();
+      } else if (line.toLowerCase().startsWith("link:")) {
+        line = line.substring(5).trim();
       }
 
       final urlMatches = urlRegex.allMatches(line);
@@ -379,7 +387,7 @@ class EnhancedTextMessageView extends StatelessWidget {
         continue;
       }
 
-      // If there's a URL, check if it's an image
+      // Process line containing URLs
       int lastIndex = 0;
       final List<InlineSpan> spans = [];
 
@@ -399,7 +407,7 @@ class EnhancedTextMessageView extends StatelessWidget {
         final cleanUrl = _cleanUrl(rawUrl);
 
         if (_isImageUrl(cleanUrl)) {
-          // ✅ render as image instead of text
+          // ✅ render image widget instead of showing text
           content.add(_buildImageWidget(cleanUrl));
         } else {
           // clickable link
