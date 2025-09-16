@@ -350,16 +350,12 @@ class EnhancedTextMessageView extends StatelessWidget {
     final List<Widget> content = [];
     final lines = text.split('\n');
 
-    // Regex patterns
-    final imageUrlRegex = RegExp(r'!\[Image\]\(([^)]+)\)');
     final urlRegex = RegExp(r'(https?://[^\s<>"\)]+)');
-
-    // Allowed image extensions
     final validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    bool _hasValidImageExtension(String url) {
+    bool _isImageUrl(String url) {
       return validImageExtensions.any(
-        (ext) => url.toLowerCase().contains(RegExp(r'\Q$ext\E(\?.*)?$')),
+        (ext) => url.toLowerCase().endsWith(ext),
       );
     }
 
@@ -369,20 +365,9 @@ class EnhancedTextMessageView extends StatelessWidget {
         continue;
       }
 
-      // 1️⃣ First, check if it has the explicit image marker
-      final imageMatch = imageUrlRegex.firstMatch(line);
-      if (imageMatch != null) {
-        final imageUrl = _extractUrlFromMatch(imageMatch.group(1)!);
-        if (_hasValidImageExtension(imageUrl)) {
-          content.add(_buildImageWidget(imageUrl));
-          continue;
-        }
-      }
-
-      // 2️⃣ Otherwise, check if any plain URLs exist
       final urlMatches = urlRegex.allMatches(line);
       if (urlMatches.isEmpty) {
-        // No URLs, just regular text
+        // Just plain text
         content.add(
           Text(
             line,
@@ -391,60 +376,18 @@ class EnhancedTextMessageView extends StatelessWidget {
                 : inComingChatBubbleConfig?.textStyle,
           ),
         );
-      } else {
-        int lastIndex = 0;
-        final List<InlineSpan> spans = [];
+        continue;
+      }
 
-        for (final match in urlMatches) {
-          // Add text before the URL
-          if (match.start > lastIndex) {
-            spans.add(
-              TextSpan(
-                text: line.substring(lastIndex, match.start),
-                style: isMessageBySender
-                    ? outgoingChatBubbleConfig?.textStyle
-                    : inComingChatBubbleConfig?.textStyle,
-              ),
-            );
-          }
+      // If there's a URL, check if it's an image
+      int lastIndex = 0;
+      final List<InlineSpan> spans = [];
 
-          final rawUrl = match.group(0)!;
-          final cleanUrl = _cleanUrl(rawUrl);
-
-          // ✅ Check if plain URL is an image
-          if (_hasValidImageExtension(cleanUrl)) {
-            // Render image instead of link
-            content.add(_buildImageWidget(cleanUrl));
-          } else {
-            // Render clickable link
-            spans.add(
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: GestureDetector(
-                  onTap: () => _launchUrl(cleanUrl),
-                  child: Text(
-                    cleanUrl,
-                    style: (isMessageBySender
-                            ? outgoingChatBubbleConfig?.textStyle
-                            : inComingChatBubbleConfig?.textStyle)
-                        ?.copyWith(
-                      color: Colors.blue,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          lastIndex = match.end;
-        }
-
-        // Add any trailing text
-        if (lastIndex < line.length) {
+      for (final match in urlMatches) {
+        if (match.start > lastIndex) {
           spans.add(
             TextSpan(
-              text: line.substring(lastIndex),
+              text: line.substring(lastIndex, match.start),
               style: isMessageBySender
                   ? outgoingChatBubbleConfig?.textStyle
                   : inComingChatBubbleConfig?.textStyle,
@@ -452,25 +395,65 @@ class EnhancedTextMessageView extends StatelessWidget {
           );
         }
 
-        if (spans.isNotEmpty) {
-          content.add(
-            RichText(
-              text: TextSpan(
-                children: spans,
-                style: isMessageBySender
-                    ? outgoingChatBubbleConfig?.textStyle
-                    : inComingChatBubbleConfig?.textStyle,
+        final rawUrl = match.group(0)!;
+        final cleanUrl = _cleanUrl(rawUrl);
+
+        if (_isImageUrl(cleanUrl)) {
+          // ✅ render as image instead of text
+          content.add(_buildImageWidget(cleanUrl));
+        } else {
+          // clickable link
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: GestureDetector(
+                onTap: () => _launchUrl(cleanUrl),
+                child: Text(
+                  cleanUrl,
+                  style: (isMessageBySender
+                          ? outgoingChatBubbleConfig?.textStyle
+                          : inComingChatBubbleConfig?.textStyle)
+                      ?.copyWith(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
             ),
           );
         }
+
+        lastIndex = match.end;
+      }
+
+      if (lastIndex < line.length) {
+        spans.add(
+          TextSpan(
+            text: line.substring(lastIndex),
+            style: isMessageBySender
+                ? outgoingChatBubbleConfig?.textStyle
+                : inComingChatBubbleConfig?.textStyle,
+          ),
+        );
+      }
+
+      if (spans.isNotEmpty) {
+        content.add(
+          RichText(
+            text: TextSpan(
+              children: spans,
+              style: isMessageBySender
+                  ? outgoingChatBubbleConfig?.textStyle
+                  : inComingChatBubbleConfig?.textStyle,
+            ),
+          ),
+        );
       }
     }
 
     return content;
   }
 
-  /// Extracted widget builder for images
   Widget _buildImageWidget(String imageUrl) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
