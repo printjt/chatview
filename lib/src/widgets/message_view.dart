@@ -350,9 +350,18 @@ class EnhancedTextMessageView extends StatelessWidget {
     final List<Widget> content = [];
     final lines = text.split('\n');
 
-    // Improved regex patterns
+    // Regex patterns
     final imageUrlRegex = RegExp(r'!\[Image\]\(([^)]+)\)');
     final urlRegex = RegExp(r'(https?://[^\s<>"\)]+)');
+
+    // Allowed image extensions
+    final validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    bool _hasValidImageExtension(String url) {
+      return validImageExtensions.any(
+        (ext) => url.toLowerCase().contains(RegExp(r'\Q$ext\E(\?.*)?$')),
+      );
+    }
 
     for (final line in lines) {
       if (line.trim().isEmpty) {
@@ -360,45 +369,17 @@ class EnhancedTextMessageView extends StatelessWidget {
         continue;
       }
 
-      // Check if line contains an image marker
+      // 1️⃣ First, check if it has the explicit image marker
       final imageMatch = imageUrlRegex.firstMatch(line);
       if (imageMatch != null) {
         final imageUrl = _extractUrlFromMatch(imageMatch.group(1)!);
-        content.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                imageUrl,
-                width: 200,
-                height: 150,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    width: 200,
-                    height: 150,
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 200,
-                    height: 150,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-        continue;
+        if (_hasValidImageExtension(imageUrl)) {
+          content.add(_buildImageWidget(imageUrl));
+          continue;
+        }
       }
 
-      // Check for regular URLs
+      // 2️⃣ Otherwise, check if any plain URLs exist
       final urlMatches = urlRegex.allMatches(line);
       if (urlMatches.isEmpty) {
         // No URLs, just regular text
@@ -411,7 +392,6 @@ class EnhancedTextMessageView extends StatelessWidget {
           ),
         );
       } else {
-        // Split the line by URLs and create clickable links
         int lastIndex = 0;
         final List<InlineSpan> spans = [];
 
@@ -428,32 +408,39 @@ class EnhancedTextMessageView extends StatelessWidget {
             );
           }
 
-          // Add the clickable URL (clean it first)
           final rawUrl = match.group(0)!;
           final cleanUrl = _cleanUrl(rawUrl);
-          spans.add(
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: GestureDetector(
-                onTap: () => _launchUrl(cleanUrl),
-                child: Text(
-                  cleanUrl,
-                  style: (isMessageBySender
-                          ? outgoingChatBubbleConfig?.textStyle
-                          : inComingChatBubbleConfig?.textStyle)
-                      ?.copyWith(
-                    color: Colors.blue,
-                    decoration: TextDecoration.underline,
+
+          // ✅ Check if plain URL is an image
+          if (_hasValidImageExtension(cleanUrl)) {
+            // Render image instead of link
+            content.add(_buildImageWidget(cleanUrl));
+          } else {
+            // Render clickable link
+            spans.add(
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: GestureDetector(
+                  onTap: () => _launchUrl(cleanUrl),
+                  child: Text(
+                    cleanUrl,
+                    style: (isMessageBySender
+                            ? outgoingChatBubbleConfig?.textStyle
+                            : inComingChatBubbleConfig?.textStyle)
+                        ?.copyWith(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
+            );
+          }
 
           lastIndex = match.end;
         }
 
-        // Add remaining text after the last URL
+        // Add any trailing text
         if (lastIndex < line.length) {
           spans.add(
             TextSpan(
@@ -465,20 +452,55 @@ class EnhancedTextMessageView extends StatelessWidget {
           );
         }
 
-        content.add(
-          RichText(
-            text: TextSpan(
-              children: spans,
-              style: isMessageBySender
-                  ? outgoingChatBubbleConfig?.textStyle
-                  : inComingChatBubbleConfig?.textStyle,
+        if (spans.isNotEmpty) {
+          content.add(
+            RichText(
+              text: TextSpan(
+                children: spans,
+                style: isMessageBySender
+                    ? outgoingChatBubbleConfig?.textStyle
+                    : inComingChatBubbleConfig?.textStyle,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     }
 
     return content;
+  }
+
+  /// Extracted widget builder for images
+  Widget _buildImageWidget(String imageUrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          imageUrl,
+          width: 200,
+          height: 150,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              width: 200,
+              height: 150,
+              color: Colors.grey[300],
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              width: 200,
+              height: 150,
+              color: Colors.grey[300],
+              child: const Icon(Icons.broken_image),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   String _extractUrlFromMatch(String urlMatch) {
