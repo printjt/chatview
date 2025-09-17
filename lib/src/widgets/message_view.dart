@@ -469,9 +469,9 @@ class EnhancedTextMessageView extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: Image.network(
           imageUrl,
-          width: 200,
-          height: 150,
-          fit: BoxFit.cover,
+          width: 180,
+          height: 130,
+          fit: BoxFit.contain,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
