@@ -475,16 +475,16 @@ class EnhancedTextMessageView extends StatelessWidget {
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
-              width: 200,
-              height: 150,
+              width: 180,
+              height: 130,
               color: Colors.grey[300],
               child: const Center(child: CircularProgressIndicator()),
             );
           },
           errorBuilder: (context, error, stackTrace) {
             return Container(
-              width: 200,
-              height: 150,
+              width: 180,
+              height: 130,
               color: Colors.grey[300],
               child: const Icon(Icons.broken_image),
             );
